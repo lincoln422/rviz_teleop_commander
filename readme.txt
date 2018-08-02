@@ -1,1 +1,1 @@
-VK rviz plugin
+version 1.1

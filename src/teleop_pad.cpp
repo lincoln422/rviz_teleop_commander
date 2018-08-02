@@ -25,6 +25,9 @@ TeleopPanel::TeleopPanel( QWidget* parent )
   , linear_velocity_y( 0 )//当前速度初始化
   , angular_velocity_( 0 )
   , smcontrol_client("hexapodservice", true)
+  , linear_velocity_x_tab3( 0 )
+  ,linear_velocity_y_tab3( 0 )
+  , angular_velocity_tab3( 0 )
 
   
   
@@ -126,18 +129,86 @@ TeleopPanel::TeleopPanel( QWidget* parent )
   //setLayout( layout2 );
  
 //*************************新建第三个tab页面*************************
-QPushButton *pushButton3 = new QPushButton("©VK Control");
+//QPushButton *pushButton3 = new QPushButton("©VK Control");
+  QWidget *third_widget= new QWidget();
+ 
+  //左中的方向按键界面
+ QVBoxLayout* motion_control_layout = new QVBoxLayout;
+ upButton = new QPushButton( tr("Up"));
+    upButton->setDefault(true);
+    upButton->setEnabled(true);
+ downButton = new QPushButton( tr("Down") ) ;
+    downButton->setDefault(true);
+    downButton->setEnabled(true);
+ leftButton = new QPushButton( tr("Left") );
+    leftButton->setDefault(true);
+    leftButton->setEnabled(true);
+ rightButton = new QPushButton( tr("Right") );
+    rightButton->setDefault(true);
+    rightButton->setEnabled(true);
+ spinButton_tab3 = new QPushButton( tr("Spin") );  
+    spinButton_tab3->setDefault(true);
+    spinButton_tab3->setEnabled(true);
+ spininvButton_tab3 = new QPushButton( tr("InvSpin") );  
+    spininvButton_tab3->setDefault(true);
+    spininvButton_tab3->setEnabled(true);
+ stopButton_tab3 = new QPushButton ( tr("Stop") );
+    stopButton->setDefault(true);
+    stopButton->setEnabled(false);
+    
+ motion_control_layout->addWidget(upButton);
+ motion_control_layout->addWidget(downButton);
+ motion_control_layout->addWidget(leftButton);
+ motion_control_layout->addWidget(rightButton);
+ motion_control_layout->addWidget(spinButton_tab3);
+ motion_control_layout->addWidget(spininvButton_tab3);
+ motion_control_layout->addWidget(stopButton_tab3);
+ 
+ QVBoxLayout* leftup_layout_tab3 = new QVBoxLayout;
+ leftup_layout_tab3->addWidget(new QLabel(tr("Topic:")));
+ output_topic_editor_tab3_ = new QLineEdit;
+ leftup_layout_tab3->addWidget(output_topic_editor_tab3_);
+ leftup_layout_tab3->addWidget(new QLabel(tr("Step:")));
+ stride_length_ = new QLineEdit;
+ leftup_layout_tab3->addWidget(stride_length_);
+ 
+ QLabel *vklogoLabel = new QLabel;
+ QPixmap vkIcon("/home/lincoln/catkin_ws/src/rviz_teleop_commander/images/logo_150.png");
+ vklogoLabel->setPixmap(vkIcon);
+ vklogoLabel->resize(150,80);
+ 
+ motion_control_layout->addWidget(vklogoLabel);
+ 
+ //右边界面
+ 
+ listView_in_tab3_ = new QListView;
+  QVBoxLayout *listView_layout_in_tab3_ = new QVBoxLayout;
+ listView_layout_in_tab3_->addWidget(listView_in_tab3_);
+   
+ //左边界面
+ QVBoxLayout *leftlayout_tab3 = new QVBoxLayout;
+ leftlayout_tab3->addLayout(leftup_layout_tab3);
+ leftlayout_tab3->addLayout(motion_control_layout);
+ 
+ QGridLayout *mainLayout_in_tab3 = new QGridLayout;
+ mainLayout_in_tab3->addLayout(leftlayout_tab3,0,0);
+ mainLayout_in_tab3->addLayout(listView_layout_in_tab3_,0,1);
+ mainLayout_in_tab3->setColumnStretch(0,1); //列宽比为1比2.5
+ mainLayout_in_tab3->setColumnStretch(1,2.5);
+ third_widget->setLayout(mainLayout_in_tab3);
   
-  
-  
+ QHBoxLayout* layout3 = new QHBoxLayout;
+ layout3->addLayout( mainLayout_in_tab3); 
+
+ 
   //*************************界面加入tab*************************
    tabWidget->addTab(first_widget,  "VelCtrl");
-   tabWidget->setMaximumSize(350,400);
-   tabWidget->setMinimumSize(350,400);
+   tabWidget->setMaximumSize(500,530);
+   tabWidget->setMinimumSize(500,530);
    tabWidget->adjustSize();
    tabWidget->addTab(second_widget,  "BusCtrl");
-   tabWidget->addTab(pushButton3, "...");
-   
+   //tabWidget->addTab(pushButton3, "...");
+   tabWidget->addTab(third_widget, "MotCtrl");
    //保证 tab 都可以将其他 界面显示完全
 layout1->addWidget(tabWidget);
 this->setLayout(layout1);
@@ -146,19 +217,19 @@ this->setLayout(layout1);
 
 layout2->addWidget(tabWidget);
 this->setLayout(layout2);
-//this->resize(500, 100);
-//this->setWindowTitle("QTabWidgetDemo2");
+
+layout3->addWidget(tabWidget);
+this->setLayout(layout3);
   
 
 
   // 创建一个定时器，用来定时发布消息
   QTimer* output_timer = new QTimer( this );
 
-  // 设置信号与槽的连接
+  // 设置信号和槽的连接  信号信号
   connect( output_topic_editor_, SIGNAL( editingFinished() ), this, SLOT( updateTopic() ));             // 输入topic命名，回车后，调用updateTopic()
- // connect( output_topic_editor_linear_x, SIGNAL( editingFinished() ), this, SLOT( update_Linear_Velocity() )); // 输入线速度值，回车后，调用update_Linear_Velocity()
-  //connect( output_topic_editor_linear_y, SIGNAL( editingFinished() ), this, SLOT( update_Linear_Velocity() ));  //改变y
-  //connect( output_topic_editor_angular_z, SIGNAL( editingFinished() ), this, SLOT( update_Angular_Velocity() ));// 输入角速度值，回车后，调用update_Angular_Velocity()
+  connect( output_topic_editor_tab3_, SIGNAL( editingFinished() ), this, SLOT(updateTopic_tab3())); 
+
   
   connect( runButton,SIGNAL(clicked(bool)),this,SLOT( update_Linear_Velocity() ) );
   connect( runButton,SIGNAL(clicked(bool)),this,SLOT( update_Angular_Velocity() ) );
@@ -174,8 +245,18 @@ this->setLayout(layout2);
   connect(ALLLEGRESETButton,SIGNAL(clicked(bool)),this,SLOT(ALLLEGRESETButtonFuc()) );
   connect(ABORTMOTIONButton,SIGNAL(clicked(bool)),this,SLOT(ABORTMOTIONButtonFuc()) );
   
+  connect(upButton,SIGNAL(clicked(bool)),this,SLOT(upFuc()));
+  connect(downButton,SIGNAL(clicked(bool)),this,SLOT(downFuc()));
+  connect(leftButton,SIGNAL(clicked(bool)),this,SLOT(leftFuc()));
+  connect(rightButton,SIGNAL(clicked(bool)),this,SLOT(rightFuc()));
+  connect(spinButton_tab3,SIGNAL(clicked(bool)),this,SLOT(spinFuc()));
+  connect(spininvButton_tab3,SIGNAL(clicked(bool)),this,SLOT(spininvFuc()));
+  connect(stopButton_tab3,SIGNAL(clicked(bool)),this,SLOT(stopFuc_tab3() ));
+  
   // 设置定时器的回调函数，按周期调用sendVel()
   connect( output_timer, SIGNAL( timeout() ), this, SLOT( sendVel() ));
+  connect( output_timer, SIGNAL( timeout() ), this, SLOT( sendVel_tab3() ));
+
 
   // 设置定时器的周期，100ms
   output_timer->start( 100 );
@@ -192,6 +273,24 @@ void TeleopPanel::stopVelocity()
     stopButton->setEnabled(false);
 }
 
+void TeleopPanel::stopFuc_tab3()
+{
+    linear_velocity_x_tab3 = 0;
+    linear_velocity_y_tab3 = 0;
+    angular_velocity_tab3 = 0;
+  
+    upButton->setEnabled(true);
+    downButton->setEnabled(true);
+    leftButton->setEnabled(true);
+    rightButton->setEnabled(true);
+    spinButton_tab3->setEnabled(true);
+    stopButton_tab3->setEnabled(false);
+    spininvButton_tab3->setEnabled(true);
+    
+    output_topic_editor_tab3_->setEnabled(true);
+    stride_length_->setEnabled(true);
+    
+}
 
 
 // 更新线速度值
@@ -225,12 +324,11 @@ void TeleopPanel::updateTopic()
   setTopic( output_topic_editor_->text() );
 }
 
-/*
-void TeleopPanel::updateBusTopic()
+void TeleopPanel::updateTopic_tab3()
 {
-  setTopic( output_topic_editor_tab2_->text() );
+  setTopic_tab3( output_topic_editor_tab3_->text() );
 }
-*/
+
 
 // 设置topic命名
 void TeleopPanel::setTopic( const QString& new_topic )
@@ -258,31 +356,141 @@ void TeleopPanel::setTopic( const QString& new_topic )
   }
 }
 
-/*
-//tab2中设置topic命名
-void TeleopPanel::set_bus_topic(const QString& new_bus_topic){
-  
-   if( new_bus_topic != output_topic_tab2_ )
+void TeleopPanel::setTopic_tab3( const QString& new_topic )
+{
+  // 检查topic是否发生改变.
+  if( new_topic != output_topic_tab3_ )
   {
-    output_topic_tab2_ = new_bus_topic;
+    output_topic_tab3_ = new_topic;
 	
-    // 如果命名为空，不发布任何信息
-    if( output_topic_ == "" )
+    // 如果命名为空，不发布任何信息void TeleopPanel::updateTopic()
     {
-      bus_topic_publisher_.shutdown();
+    setTopic_tab3( output_topic_editor_tab3_->text() );
+    }
+    if( output_topic_tab3_ == "" )
+    {
+      chatter_publisher_tab3.shutdown();
     }
 	// 否则，初始化publisher
     else
     {
-      //初始化bustopic 的 publisher
-      bus_topic_publisher_ = nh_.advertise<geometry_msgs::Twist>( output_topic_tab2_.toStdString(), 1 );
+      chatter_publisher_tab3 = nh_.advertise<geometry_msgs::Twist>( output_topic_tab3_.toStdString(), 1 );
     }
 
     Q_EMIT configChanged();
   }
 }
-*/
 
+void TeleopPanel::upFuc()
+{     
+    QString temp_string_length = stride_length_->text();
+    float a = temp_string_length.toFloat();
+    linear_velocity_x_tab3 = a;
+    linear_velocity_y_tab3 = 0.0;
+    angular_velocity_tab3 = 0.0;
+    downButton->setEnabled(false);
+    leftButton->setEnabled(false);
+    rightButton->setEnabled(false);
+    spinButton_tab3->setEnabled(false);
+    spininvButton_tab3->setEnabled(false);
+    stopButton_tab3->setEnabled(true);
+    
+    output_topic_editor_tab3_->setEnabled(false);
+    stride_length_->setEnabled(false);
+    
+
+}
+
+void TeleopPanel::downFuc()
+{
+    QString temp_string_length = stride_length_->text();
+    float a = temp_string_length.toFloat();
+   linear_velocity_x_tab3 = -a;
+   linear_velocity_y_tab3 = 0.0;
+   angular_velocity_tab3 = 0.0;
+    upButton->setEnabled(false);
+    leftButton->setEnabled(false);
+    rightButton->setEnabled(false);
+    spinButton_tab3->setEnabled(false);
+    stopButton_tab3->setEnabled(true);
+    spininvButton_tab3->setEnabled(false);
+    
+    output_topic_editor_tab3_->setEnabled(false);
+    stride_length_->setEnabled(false);
+}
+
+void TeleopPanel::leftFuc()
+{
+    QString temp_string_length = stride_length_->text();
+    float a = temp_string_length.toFloat();
+    linear_velocity_x_tab3 = 0.0;
+    linear_velocity_y_tab3 = a;
+    angular_velocity_tab3 = 0.0;
+    downButton->setEnabled(false);
+    upButton->setEnabled(false);
+    rightButton->setEnabled(false);
+    spinButton_tab3->setEnabled(false);
+    spininvButton_tab3->setEnabled(false);
+    stopButton_tab3->setEnabled(true);
+    
+    output_topic_editor_tab3_->setEnabled(false);
+    stride_length_->setEnabled(false);
+}
+
+void TeleopPanel::rightFuc()
+{   
+    QString temp_string_length = stride_length_->text();
+    float a = temp_string_length.toFloat();
+    linear_velocity_x_tab3 = 0.0;
+    linear_velocity_y_tab3 = -a;
+    angular_velocity_tab3 = 0.0;
+    downButton->setEnabled(false);
+    leftButton->setEnabled(false);
+    upButton->setEnabled(false);
+    spinButton_tab3->setEnabled(false);
+    spininvButton_tab3->setEnabled(false);
+    stopButton_tab3->setEnabled(true);
+    
+    output_topic_editor_tab3_->setEnabled(false);
+    stride_length_->setEnabled(false);
+}
+
+void TeleopPanel::spinFuc()
+{
+    QString temp_string_length = stride_length_->text();
+    float a = temp_string_length.toFloat();
+    linear_velocity_x_tab3 = 0.0;
+    linear_velocity_y_tab3 = 0.0;
+    angular_velocity_tab3 = a;
+    downButton->setEnabled(false);
+    leftButton->setEnabled(false);
+    upButton->setEnabled(false);
+    rightButton->setEnabled(false);
+    spininvButton_tab3->setEnabled(false);
+    stopButton_tab3->setEnabled(true);
+    
+    output_topic_editor_tab3_->setEnabled(false);
+    stride_length_->setEnabled(false);
+}
+
+void TeleopPanel::spininvFuc()
+{
+    QString temp_string_length = stride_length_->text();
+    float a = temp_string_length.toFloat();
+  
+    linear_velocity_x_tab3 = 0.0;
+    linear_velocity_y_tab3 = 0.0;
+    angular_velocity_tab3 = -a;
+    downButton->setEnabled(false);
+    leftButton->setEnabled(false);
+    upButton->setEnabled(false);
+    rightButton->setEnabled(false);
+    spinButton_tab3->setEnabled(false);
+    stopButton_tab3->setEnabled(true);
+    
+    output_topic_editor_tab3_->setEnabled(false);
+    stride_length_->setEnabled(false);
+}
 
 
 // 发布消息
@@ -298,6 +506,21 @@ void TeleopPanel::sendVel()
     msg.angular.y = 0;
     msg.angular.z = angular_velocity_;
     velocity_publisher_.publish( msg );
+  }
+}
+
+void TeleopPanel::sendVel_tab3()
+{
+  if( ros::ok() && chatter_publisher_tab3 )
+  {
+    geometry_msgs::Twist msg;
+    msg.linear.x = linear_velocity_x_tab3;
+    msg.linear.y = linear_velocity_y_tab3;
+    msg.linear.z = 0;
+    msg.angular.x = 0;
+    msg.angular.y = 0;
+    msg.angular.z = angular_velocity_tab3;
+    chatter_publisher_tab3.publish( msg );
   }
 }
 
